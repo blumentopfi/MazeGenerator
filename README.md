@@ -1,0 +1,1 @@
+A little maze generator in C based on Prim's Algorithm.
