@@ -3,9 +3,13 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
-int BMP_HEIGHT = 633;
-int BMP_WIDTH = 633;
-
+#include <SDL2/SDL.h>
+int BMP_HEIGHT = 333;
+int BMP_WIDTH = 333;
+char bmp_in_memory[110889];
+SDL_Window* m_window = NULL ;
+SDL_Surface* ScreenSurface = NULL ;
+SDL_Surface* image = NULL;
 #define BLACK 0x00000000
 #define WHITE 0x00FFFFFF
 #define RED   0x00FF0000
@@ -100,7 +104,7 @@ void recursion (int x,int y,uint32_t *data) {
     int dir[4];
     int i;
     fillIntWithRanDir(dir);
-    
+
     for( i = 0; i < 4; i++ ) {
         switch( dir[i] ){
         case 0:
@@ -167,7 +171,7 @@ void generateExit (uint32_t *data){
    int  random2;
    int  y = 0;
    int  x = 0;
-   
+
    random = rand()%4;
 
    switch( random ) {
@@ -215,6 +219,8 @@ void solveMaze (int x,int y,uint32_t *data){
 }
 
 int FindPathToExit (int x,int y,uint32_t *data){
+        PaintData(data);
+        loadMedia() ;
        if (x < 0 || x >= BMP_WIDTH || y < 0 || y >= BMP_HEIGHT ){
         return 0;
        }
@@ -286,16 +292,47 @@ void rectangle (uint32_t *data) {
     }
 }
 
+
+int init(){
+if (SDL_Init(SDL_INIT_VIDEO) < 0){
+    printf("Init failed Error: %s \n",SDL_GetError()) ;
+} else {
+    m_window = SDL_CreateWindow("Maze",SDL_WINDOWPOS_UNDEFINED,SDL_WINDOWPOS_UNDEFINED,BMP_HEIGHT,BMP_WIDTH,SDL_WINDOW_SHOWN);
+    SDL_SetWindowFullscreen(m_window,SDL_WINDOW_FULLSCREEN);
+    if (m_window == NULL){
+        printf("Windows failed Error: %s",SDL_GetError()) ;
+    }else{
+    ScreenSurface = SDL_GetWindowSurface(m_window);
+    }
+
+}
+}
+
+
+int loadMedia(){
+    image = SDL_LoadBMP("raster.bmp");
+    if (image == NULL){
+        printf("Image Loading : Error %s",SDL_GetError()) ;
+    }
+    SDL_BlitSurface(image,NULL,ScreenSurface,NULL) ;
+    SDL_UpdateWindowSurface(m_window);
+    SDL_FreeSurface(image);
+    //SDL_Delay(0);
+}
+
+
+
 /**
  * Hauptprogramm
  */
-int main() {
+int main(int argc, char* args[]) {
 
-    int x, y, a=0,b=0 ;
+   int x, y, a=0,b=0 ;
 
     printf("Bitte ungerade Zahl eingeben: \n ");
     scanf("%d",&BMP_HEIGHT);
     BMP_WIDTH = BMP_HEIGHT;
+     init();
     uint32_t *data = NULL;
     data = (uint32_t*)malloc ( BMP_WIDTH*BMP_HEIGHT*sizeof(uint32_t));
     printf("%d\n", BMP_WIDTH*BMP_HEIGHT*sizeof(uint32_t));
@@ -310,7 +347,25 @@ int main() {
     printf("A: %d,B: %d",a,b);
     solveMaze(a,b,data);
     setPixel(a,b,YELLOW,data);
-    // Schreibe BMP Datei
+
+    PaintData(data) ;
+
+    loadMedia();
+
+    SDL_Delay(10000) ;
+    return 0 ;
+
+
+
+    //free(data);
+
+    return 0;
+}
+
+
+
+void PaintData(uint32_t *data){
+    int y , x  ;
     FILE *file = fopen("raster.bmp", "w");
     bitmap_file_header(file);
     bitmap_info_header(file);
@@ -320,7 +375,4 @@ int main() {
         }
     }
     fclose(file);
-    //free(data);
-
-    return 0;
 }
