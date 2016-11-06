@@ -102,7 +102,6 @@ void generateMaze2(uint32_t *data){
 }
 
 void recursion (int x,int y,uint32_t *data) {
-    //PaintData(data);
     loadMedia(data);
     int dir[4];
     int i;
@@ -316,25 +315,12 @@ if (SDL_Init(SDL_INIT_VIDEO) < 0){
 
 
 int loadMedia(uint32_t *data){
-    Uint32 rmask, gmask, bmask, amask;
-#if SDL_BYTEORDER == SDL_BIG_ENDIAN
-  int shift = (req_format == STBI_rgb) ? 8 : 0;
-  rmask = 0xff000000 >> shift;
-  gmask = 0x00ff0000 >> shift;
-  bmask = 0x0000ff00 >> shift;
-  amask = 0x000000ff >> shift;
-#else // little endian, like x86
-  rmask = 0x000000ff;
-  gmask = 0x0000ff00;
-  bmask = 0x00ff0000;
-#endif
-
     image = SDL_CreateRGBSurfaceFrom(data,BMP_WIDTH,BMP_HEIGHT,32,4*BMP_WIDTH,0,0,0,0);
 
     SDL_BlitSurface(image,NULL,ScreenSurface,NULL) ;
     SDL_UpdateWindowSurface(m_window);
     SDL_FreeSurface(image);
-    SDL_Delay(3);
+    //SDL_Delay(0);
 }
 
 
@@ -370,7 +356,7 @@ int main(int argc, char* args[]) {
         setPixel(a,b,YELLOW,data);
 
 
-
+        PaintData(data);
 
 
     return 0 ;
