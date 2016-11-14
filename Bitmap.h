@@ -6,7 +6,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-
+#define BLACK 0x00000000
+#define WHITE 0x00FFFFFF
+#define RED   0x00FF0000
+#define GREEN 0x0000FF00
+#define BLUE  0x000000FF
+#define YELLOW 0x00FFF700
+#define turk   0x0000FFFF
 
 
 
@@ -112,5 +118,15 @@ void setPixel(int x, int y, uint32_t color, uint32_t * data) {
     data[y*BMP_WIDTH+x] = color;
 }
 
+void InitializeBMPWithBlackBackground (uint32_t *data) {
+    int a,b;
+    for (a=0;a<=BMP_HEIGHT-1;a++){
+        for(b=0;b<=BMP_WIDTH-1;b++){
+
+                setPixel(a, b, BLACK, data);
+
+        }
+    }
+}
 
 #endif
