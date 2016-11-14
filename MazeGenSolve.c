@@ -4,13 +4,8 @@
 #include <time.h>
 #include <string.h>
 #include <SDL2/SDL.h>
-int BMP_HEIGHT = 333;
-int BMP_WIDTH = 333;
-     * Bytemap ;
-int BytemapCounter = 0 ;
-SDL_Window* m_window = NULL ;
-SDL_Surface* ScreenSurface = NULL ;
-SDL_Surface* image = NULL;
+#include "Graphics.h"
+#include "Bitmap.h"
 #define BLACK 0x00000000
 #define WHITE 0x00FFFFFF
 #define RED   0x00FF0000
@@ -20,74 +15,8 @@ SDL_Surface* image = NULL;
 #define turk   0x0000FFFF
 
 
-struct Cell {
-    int y;
-    int x;
-    int VorCellX;
-    int VorCellY;
-};
 
-/**
- * Schreibt die N letzten Bytes eines 64-bit Integers in einen File-Deskriptor.
- * Das am wenigsten signifikante Byte (LSB) wird zuerst geschrieben.
- * (Little Endian).
- *
- * Eingabeparameter:
- *   file: File-Deskriptor.
- *   byte: Byte-Muster.
- *   N: Anzahl der zu schreibenden Bytes (N <= 8).
- */
-void write_N_byte(FILE * file, uint64_t byte, int N) {
-    int i;
-    for(i = 0; i < N; i++) {
-        fputc(byte % 256,file) ;
-        byte /= 256;
-    }
-}
-
-/**
- * Im BMP zugeordneten Daten-Array "data" wird an der Koordinate (x,y) der
- * Pixel auf den Wert "color" gesetzt.
- *
- * Eingabeparameter:
- *   x: X-Koordinate im BMP.s
- *   y: Y-Koordinate im BMP.
- *   color: Pixelfarbe.
- *   data: BMP Daten-Array.
- */
-void setPixel(int x, int y, uint32_t color, uint32_t * data) {
-    data[y*BMP_WIDTH+x] = color;
-}
-
-/**
- * Erstellt einen BMP-File-Header, insgesamt 14 Byte.
- *
- * Eingabeparameter:
- *   file: File-Deskriptor, der geoeffneten BMP-Datei.
- */
-void bitmap_file_header(FILE * file) {
-    // (2 Byte, uint16_t) ASCII-Zeichenkette "BM" (Hex: 0x42 0x4D Dez: 19778).
-    write_N_byte(file, 'B', 1);
-    write_N_byte(file, 'M', 1);
-    // (4 Byte, uint32_t) Groesse der BMP-Datei in Byte.
-    // = bitmap_file_header + bitmap_info_header + Daten
-    write_N_byte(file, 14 + 40 + BMP_WIDTH * BMP_HEIGHT * 32, 4);
-    // (4 Byte, uint32_t) Reserviert, Standard: 0
-    write_N_byte(file, 0, 4);
-    // (4 Byte, uint32_t) Offset der Bilddaten in Byte vom Beginn der Datei an,
-    // bei Echtfarben fast immer 54 (manche Software ignoriert diese Angabe
-    // daher fehlerhafterweise).
-    write_N_byte(file, 54, 4);
-}
-
-void mypause ( void )
-{
-    printf ( "Press [Enter] to continue . . ." );
-    fflush ( stdout );
-    getchar();
-}
-
-void generateMaze2(uint32_t *data){
+void generateMaze(uint32_t *data){
     int Startx,Starty,counter,oldx,oldy;
     srand(time(NULL));
 
@@ -102,7 +31,7 @@ void generateMaze2(uint32_t *data){
 }
 
 void recursion (int x,int y,uint32_t *data) {
-    loadMedia(data);
+    UpdateScreen(data,0);
     int dir[4];
     int i;
     fillIntWithRanDir(dir);
@@ -221,8 +150,7 @@ void solveMaze (int x,int y,uint32_t *data){
 }
 
 int FindPathToExit (int x,int y,uint32_t *data){
-        //PaintData(data);
-        loadMedia(data) ;
+       UpdateScreen(data,0) ;
        if (x < 0 || x >= BMP_WIDTH || y < 0 || y >= BMP_HEIGHT ){
         return 0;
        }
@@ -251,40 +179,7 @@ int FindPathToExit (int x,int y,uint32_t *data){
        return 0;
 }
 
-/**
- * Erstellt einen BMP-Info-Header, insgesamt 40 Byte.
- *
- * Eingabeparameter:
- *   file: File-Deskriptor, der geoeffneten BMP-Datei.
- */
-void bitmap_info_header(FILE * file) {
-  // (4 Byte, uint32_t) Groesse von bitmap_info_header in Byte
-  write_N_byte(file, 40, 4);
-  // (4 Byte, int32_t) Breite der Bitmap in Pixel.
-  write_N_byte(file, BMP_WIDTH, 4);
-  // (4 Byte, int32_t) Hoehe der Bitmap in Pixel. Negativ: top-bottom.
-  write_N_byte(file, -BMP_HEIGHT, 4);
-  // (2 Byte, uint16_t) Anzahl der Farbebenen, nicht fuer BMP verwendet
-  write_N_byte(file, 1, 2);
-  // (2 Byte, uint16_t) Gibt die Farbtiefe der Bitmap in bpp an; muss einer
-  // der folgenden Werte sein: 1, 4, 8, 16, 24 oder 32. Bei 1, 4 und 8 bpp
-  // sind die Farben indiziert.
-  write_N_byte(file, 32, 2);
-  // (4 Byte, uint32_t) Keine Kompression verwendet = 0
-  write_N_byte(file, 0, 4);
-  // (4 Byte, uint32_t) Groesse der reinen Bilddaten in Byte (mit padding).
-  write_N_byte(file, BMP_WIDTH * BMP_HEIGHT * 32, 4);
-  // (4 Byte, int32_t) Horizontale Aufloesung des Zielausgabegerätes in Pixel
-  // pro Meter; wird aber fuer BMP-Dateien meistens auf 0 gesetzt.
-  write_N_byte(file, 0, 4);
-  // (4 Byte, int32_t) Vertikale Aufloesung des Zielausgabegerätes in Pixel
-  // pro Meter; wird aber fuer BMP-Dateien meistens auf 0 gesetzt.
-  write_N_byte(file, 0, 4);
-  // (4 Byte, uint32_t) Anzahl der Eintraege der Farbtabelle; 0 bedeutet keine.
-  write_N_byte(file, 0, 4);
-  // (4 Byte, uint32_t) Anzahl wichtiger Farben; 0 bedeutet alle sind wichtig.
-  write_N_byte(file, 0, 4);
-}
+
 
 void rectangle (uint32_t *data) {
     int a,b;
@@ -298,30 +193,10 @@ void rectangle (uint32_t *data) {
 }
 
 
-int init(){
-if (SDL_Init(SDL_INIT_VIDEO) < 0){
-    printf("Init failed Error: %s \n",SDL_GetError()) ;
-} else {
-    m_window = SDL_CreateWindow("Maze",SDL_WINDOWPOS_UNDEFINED,SDL_WINDOWPOS_UNDEFINED,BMP_HEIGHT,BMP_WIDTH,SDL_WINDOW_SHOWN);
-    //SDL_SetWindowFullscreen(m_window,SDL_WINDOW_FULLSCREEN);
-    if (m_window == NULL){
-        printf("Windows failed Error: %s",SDL_GetError()) ;
-    }else{
-    ScreenSurface = SDL_GetWindowSurface(m_window);
-    }
-
-}
-}
 
 
-int loadMedia(uint32_t *data){
-    image = SDL_CreateRGBSurfaceFrom(data,BMP_WIDTH,BMP_HEIGHT,32,4*BMP_WIDTH,0,0,0,0);
 
-    SDL_BlitSurface(image,NULL,ScreenSurface,NULL) ;
-    SDL_UpdateWindowSurface(m_window);
-    SDL_FreeSurface(image);
-    //SDL_Delay(0);
-}
+
 
 
 
@@ -332,54 +207,31 @@ int main(int argc, char* args[]) {
 
    int x, y, a=0,b=0 ;
 
+    uint32_t *data = NULL;
     printf("Bitte ungerade Zahl eingeben: \n ");
     scanf("%d",&BMP_HEIGHT);
     BMP_WIDTH = BMP_HEIGHT;
+    InitializeWindow();
 
-    Bytemap = malloc(sizeof(char)*65*65*65);
-
-     init();
-
-    uint32_t *data = NULL;
     data = (uint32_t*)malloc ( BMP_WIDTH*BMP_HEIGHT*sizeof(uint32_t));
-    printf("%d\n", BMP_WIDTH*BMP_HEIGHT*sizeof(uint32_t));
     rectangle(data);
-    generateMaze2(data);
+    generateMaze(data);
 
      do {
         a = rand()%BMP_HEIGHT-1;
         b= a;
      }while(a %2 == 0 );
 
-        printf("A: %d,B: %d",a,b);
-        solveMaze(a,b,data);
-        setPixel(a,b,YELLOW,data);
+    printf("A: %d,B: %d",a,b);
+    solveMaze(a,b,data);
+    setPixel(a,b,YELLOW,data);
+    SaveBitmapAsFile(data,"raster");
 
-
-        PaintData(data);
-
-
-    return 0 ;
-
-
-
-    //free(data);
+    free(data);
 
     return 0;
 }
 
 
 
-void PaintData(uint32_t *data){
-    int y , x  ;
-    FILE *file = fopen("raster.bmp", "w");
-    bitmap_file_header(file);
-    bitmap_info_header(file);
-    for (y = 0; y < BMP_HEIGHT; y++) {
-        for (x = 0; x < BMP_WIDTH; x++) {
-            write_N_byte(file, data[y * BMP_WIDTH + x], 4);
 
-        }
-    }
-    fclose(file);
-}
